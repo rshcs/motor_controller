@@ -3,7 +3,7 @@ volatile boolean intstate = 0;
 uint32_t t0; // to calc frequency
 uint32_t t1;
 uint32_t tmrp; // serial print tmr
-uint32_t tp;
+String instr = "";
 
 void setup()
 {
@@ -15,14 +15,25 @@ void setup()
 
 void loop()
 {
-   
-    sprinter(f(), 1000);
+    //sprinter(f(), 1000);
     
+    while (Serial.available())
+    {
+        instr += (char) Serial.read();
+        if (!Serial.available())
+        {
+            Serial.println(instr);
+            instr = "";
+        }
+        
+    }
     
-    
-    
-    
-
+    /*
+    String str1 = "123";
+    String str2 = "world";
+    Serial.println(str1.toInt() + 5);
+    delay(1000);
+    */
 }
 
 void state_change()
@@ -41,7 +52,7 @@ uint32_t tperiod()
     }
     if (micros() - t0 > 100000)
     {
-        return 4294967295;
+        return 4294967295; 
     }
     else
     {
@@ -49,7 +60,7 @@ uint32_t tperiod()
     }
 }
 
-uint32_t f() //frequency
+uint16_t f() //frequency
 {
 
     return 1000000 / tperiod();
