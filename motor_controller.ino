@@ -3,12 +3,15 @@ volatile boolean intstate = 0;
 uint32_t t0; // to calc frequency
 uint32_t t1;
 uint32_t tmrp; // serial print tmr
-String instr = "";
+//String instr = "";
+int8_t motor_pin = 6;
+uint8_t pwm_out = 0;
 
 void setup()
 {
     Serial.begin(9600);
     attachInterrupt(0, state_change, RISING);
+    pinMode(motor_pin, OUTPUT);
     t0 = micros();
     tmrp = millis();
 }
@@ -17,23 +20,17 @@ void loop()
 {
     //sprinter(f(), 1000);
     
-    while (Serial.available())
+    if(Serial.available())
     {
-        instr += (char) Serial.read();
-        if (!Serial.available())
-        {
-            Serial.println(instr);
-            instr = "";
-        }
-        
+        Serial.println(ser_read());
     }
     
-    /*
-    String str1 = "123";
-    String str2 = "world";
-    Serial.println(str1.toInt() + 5);
-    delay(1000);
-    */
+   /*
+   if(Serial.available())
+   {
+       analogWrite(motor_pin, ser_read_int());
+   }
+   */
 }
 
 void state_change()
@@ -72,5 +69,40 @@ void sprinter(uint32_t inprint, uint16_t indly)
     {
         Serial.println(inprint);
         tmrp = millis();
+    }
+}
+
+int16_t ser_read_int()
+{
+    String instr = "";
+    while (Serial.available())
+    {
+        instr += (char) Serial.read();
+        delay(5);
+        if (!Serial.available())
+        {
+            //Serial.println(instr.toInt());
+            //instr = "";
+            return instr.toInt();
+        } 
+    }
+}
+
+int8_t ser_read()
+{
+    String instr = "";
+    while (Serial.available())
+    {
+        instr += (char) Serial.read();
+        delay(5);
+        if (!Serial.available())
+        {
+            if(instr.startsWith("p"))
+                return 1;
+            else if(instr.startsWith("i"))
+                return 2;
+            else if(instr.startsWith("d"))
+                return 3;
+        } 
     }
 }
