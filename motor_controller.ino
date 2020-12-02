@@ -7,6 +7,12 @@ uint32_t tmrp; // serial print tmr
 int8_t motor_pin = 6;
 uint8_t pwm_out = 0;
 
+int16_t kp = 0;
+int16_t ki = 0;
+int16_t kd = 0;
+int setvalue = 0;
+int16_t error;
+int32_t errorinc;
 void setup()
 {
     Serial.begin(9600);
@@ -19,18 +25,37 @@ void setup()
 void loop()
 {
     //sprinter(f(), 1000);
-    
+    tperiod();
     if(Serial.available())
     {
-        Serial.println(ser_read());
+        //delay(5);
+        //Serial.println(Serial.available());
+        ser_read();
+        
     }
     
-   /*
-   if(Serial.available())
-   {
-       analogWrite(motor_pin, ser_read_int());
-   }
-   */
+    if(millis() - tmrp > 1000)
+    {
+        Serial.print("|sp=");
+        Serial.print(setvalue);
+        Serial.print("|f=");
+        Serial.print(f());
+        Serial.print("|pwm=");
+        Serial.print(pwm_out);
+        Serial.print("|kp=");
+        Serial.print(kp);
+        Serial.print("|ki=");
+        Serial.print(ki);
+        Serial.print("|e=");
+        Serial.print(error);
+        Serial.print("|einc");
+        Serial.println(errorinc);
+        tmrp = millis();
+    }
+    
+    pwm_out = pi_out();
+    analogWrite(motor_pin, pwm_out);
+
 }
 
 void state_change()
@@ -88,21 +113,68 @@ int16_t ser_read_int()
     }
 }
 
-int8_t ser_read()
+void ser_read()
 {
     String instr = "";
     while (Serial.available())
     {
         instr += (char) Serial.read();
         delay(5);
+        //Serial.println("in");
         if (!Serial.available())
         {
-            if(instr.startsWith("p"))
-                return 1;
+            if(instr.startsWith("s"))
+            {
+                instr.remove(0, 1);
+                setvalue = instr.toInt();
+                //Serial.println("sv");
+            }
+            else if(instr.startsWith("p"))
+            {
+                instr.remove(0, 1);
+                kp = instr.toInt();
+            }  
             else if(instr.startsWith("i"))
-                return 2;
+            {
+                instr.remove(0, 1);
+                ki = instr.toInt();
+            } 
             else if(instr.startsWith("d"))
-                return 3;
+            {
+                instr.remove(0, 1);
+                kd = instr.toInt();
+            }  
         } 
     }
+}
+
+float pout()
+{
+    float pgain = (float) kp / 100;
+    return (int16_t)(pgain * setvalue);
+}
+
+float iout()
+{
+    float igain = (float) ki / 100;
+    error = setvalue - f();
+    if(pwm_out < 0 && error < 0)
+    {
+
+    }
+    else if(pwm_out > 255 && error > 255)
+    {
+
+    }
+    else
+        errorinc += error;
+    return (igain * errorinc);
+}
+
+int16_t pi_out()
+{
+    float outv = (float)pout() + iout();
+    if(outv > 255)
+        outv = 255;
+    return (int16_t)outv;
 }
