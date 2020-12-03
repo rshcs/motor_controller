@@ -11,7 +11,7 @@ int16_t kp = 21;
 int32_t ki = 0;
 int16_t kd = 0;
 int setvalue = 750;
-int16_t error;
+int16_t error, errorlast;
 int32_t errorinc;
 uint32_t tmrc;
 
@@ -46,17 +46,22 @@ void loop()
         Serial.print("|pwm=");
         Serial.print(pwm_out);
         Serial.print("|kp=");
-        Serial.print(kp);
+        Serial.print(((float)kp)/100, 2);
+        
         Serial.print("|ki=");
-        Serial.print(ki);
+        Serial.print(((float)ki)/1000000, 6);
         Serial.print("|e=");
         Serial.print(error);
+        Serial.print("|elast=");
+        Serial.print(errorlast);
         Serial.print("|einc=");
         Serial.print(errorinc);
+        Serial.print("|pout=");
+        Serial.print(pout());
         Serial.print("|iout=");
         Serial.print(ki * errorinc / 1000000);
         Serial.print("|kd");
-        Serial.print(kd / 100);
+        Serial.print(((float) kd) / 100);
         Serial.print("|dout=");
         Serial.println(error * kd /100);
         tmrp = millis();
@@ -80,6 +85,7 @@ void state_change()
 
 uint32_t tperiod()
 {
+    //uint32_t t1;
     if (intstate)
     {
         intstate = 0;
@@ -88,18 +94,17 @@ uint32_t tperiod()
     }
     if (micros() - t0 > 100000)
     {
-        return 4294967295; 
+        t1 = 4294967295; 
     }
-    else
-    {
-        return t1;
-    }
+    return t1;
+    
+
 }
 
 uint16_t f() //frequency
 {
 
-    return 1000000 / tperiod();
+    return 1000000 / t1;
 }
 
 void sprinter(uint32_t inprint, uint16_t indly)
@@ -164,13 +169,13 @@ void ser_read()
 
 float pout()
 {
-    float pgain = (float) kp / 100;
-    return (int16_t)(pgain * setvalue);
+    float pgain = ((float)kp) / 100;
+    return pgain * setvalue;
 }
 
 float iout()
 {
-    float igain = (float) ki / 1000000;
+    float igain = ((float) ki) / 1000000;
     error = setvalue - f();
     if(ki != 0)
     {
@@ -190,14 +195,16 @@ float iout()
     return 0;
 }
 
-uint16_t dout()
+float dout()
 {
-    float dgain = (float)kd / 100;
-    return error * kd;
+    float dgain = ((float)kd) / 100;
+    float outv = dgain * (error - errorlast);
+    errorlast = error;
+    return outv;
 }
 int16_t pi_out()
 {
-    float outv = (float)pout() + iout() + dout();
+    float outv = pout() + iout() + dout();
     if(outv > 255)
         outv = 255;
     else if(outv < 0)
