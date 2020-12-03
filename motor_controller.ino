@@ -27,7 +27,7 @@ void setup()
 
 void loop()
 {
-    //sprinter(f(), 1000);
+    
     tperiod();
     if(Serial.available())
     {
@@ -36,7 +36,7 @@ void loop()
         ser_read();
         
     }
-    
+    /*
     if(millis() - tmrp > 1000)
     {
         Serial.print("sp=");
@@ -52,8 +52,8 @@ void loop()
         Serial.print(((float)ki)/1000000, 6);
         Serial.print("|e=");
         Serial.print(error);
-        Serial.print("|elast=");
-        Serial.print(errorlast);
+        //Serial.print("|elast=");
+        //Serial.print(errorlast);
         Serial.print("|einc=");
         Serial.print(errorinc);
         Serial.print("|pout=");
@@ -66,10 +66,18 @@ void loop()
         Serial.println(error * kd /100);
         tmrp = millis();
     }
-    
+    */
+    if(millis() - tmrp > 100)
+    {
+        Serial.print(setvalue);
+        Serial.print(",");
+        Serial.println(f());
+        tmrp = millis();
+    }
+
     if(millis() - tmrc > 20)
     {
-        pwm_out = pi_out();
+        pwm_out = pid_out();
         analogWrite(motor_pin, pwm_out);
         tmrc = millis();
     }
@@ -107,30 +115,6 @@ uint16_t f() //frequency
     return 1000000 / t1;
 }
 
-void sprinter(uint32_t inprint, uint16_t indly)
-{
-    if (millis() - tmrp > indly)
-    {
-        Serial.println(inprint);
-        tmrp = millis();
-    }
-}
-
-int16_t ser_read_int()
-{
-    String instr = "";
-    while (Serial.available())
-    {
-        instr += (char) Serial.read();
-        delay(5);
-        if (!Serial.available())
-        {
-            //Serial.println(instr.toInt());
-            //instr = "";
-            return instr.toInt();
-        } 
-    }
-}
 
 void ser_read()
 {
@@ -202,9 +186,9 @@ float dout()
     errorlast = error;
     return outv;
 }
-int16_t pi_out()
+int16_t pid_out()
 {
-    float outv = pout() + iout() + dout();
+    float outv = pout() + iout() + dout() + .5;
     if(outv > 255)
         outv = 255;
     else if(outv < 0)
