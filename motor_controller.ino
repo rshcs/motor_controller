@@ -7,12 +7,14 @@ uint32_t tmrp; // serial print tmr
 int8_t motor_pin = 6;
 uint8_t pwm_out = 0;
 
-int16_t kp = 0;
-int16_t ki = 0;
+int16_t kp = 21;
+int32_t ki = 0;
 int16_t kd = 0;
-int setvalue = 0;
+int setvalue = 750;
 int16_t error;
 int32_t errorinc;
+uint32_t tmrc;
+
 void setup()
 {
     Serial.begin(9600);
@@ -20,6 +22,7 @@ void setup()
     pinMode(motor_pin, OUTPUT);
     t0 = micros();
     tmrp = millis();
+    tmrc = millis();
 }
 
 void loop()
@@ -36,7 +39,7 @@ void loop()
     
     if(millis() - tmrp > 1000)
     {
-        Serial.print("|sp=");
+        Serial.print("sp=");
         Serial.print(setvalue);
         Serial.print("|f=");
         Serial.print(f());
@@ -48,13 +51,24 @@ void loop()
         Serial.print(ki);
         Serial.print("|e=");
         Serial.print(error);
-        Serial.print("|einc");
-        Serial.println(errorinc);
+        Serial.print("|einc=");
+        Serial.print(errorinc);
+        Serial.print("|iout=");
+        Serial.print(ki * errorinc / 1000000);
+        Serial.print("|kd");
+        Serial.print(kd / 100);
+        Serial.print("|dout=");
+        Serial.println(error * kd /100);
         tmrp = millis();
     }
     
-    pwm_out = pi_out();
-    analogWrite(motor_pin, pwm_out);
+    if(millis() - tmrc > 20)
+    {
+        pwm_out = pi_out();
+        analogWrite(motor_pin, pwm_out);
+        tmrc = millis();
+    }
+    
 
 }
 
@@ -156,25 +170,39 @@ float pout()
 
 float iout()
 {
-    float igain = (float) ki / 100;
+    float igain = (float) ki / 1000000;
     error = setvalue - f();
-    if(pwm_out < 0 && error < 0)
+    if(ki != 0)
     {
-
-    }
-    else if(pwm_out > 255 && error > 255)
-    {
-
+        if(pwm_out < 0 && error < 0){}
+        else if(pwm_out > 255 && error > 0){}
+        else {errorinc += error;}
+        float outv = igain * errorinc;
+        //if(outv < 0)
+            //outv = 0;
+        return outv;
     }
     else
-        errorinc += error;
-    return (igain * errorinc);
+    {
+        errorinc = 0;
+    }
+    
+    return 0;
 }
 
+uint16_t dout()
+{
+    float dgain = (float)kd / 100;
+    return error * kd;
+}
 int16_t pi_out()
 {
-    float outv = (float)pout() + iout();
+    float outv = (float)pout() + iout() + dout();
     if(outv > 255)
         outv = 255;
+    else if(outv < 0)
+    {
+        outv = 0;
+    }
     return (int16_t)outv;
 }
